@@ -532,13 +532,13 @@ img {
   border: 1px solid var(--line-gold);
   border-radius: var(--radius-lg);
   box-shadow: 0 16px 36px rgba(0,0,0,0.6);
-  transition: transform 0.3s var(--ease-bounce), border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .kage-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: var(--gold);
-  box-shadow: 0 20px 44px rgba(0,0,0,0.8), 0 0 20px rgba(212,175,55,0.2);
+  box-shadow: 0 20px 44px rgba(0,0,0,0.8), 0 0 16px rgba(212,175,55,0.18);
 }
 
 /* --------------------------------------------------------------------------
@@ -1256,5 +1256,34 @@ img {
   .kage-btn-primary {
     padding: 9px 16px;
     font-size: 12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   ACCESSIBILITY & REDUCED MOTION (Anti-AI-UI Standards)
+   -------------------------------------------------------------------------- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  #intro-portal,
+  #chibi-companion,
+  .gallery-item img {
+    transform: none !important;
+    transition: none !important;
   }
 }
