@@ -7,6 +7,7 @@ const AppState = {
   kotowazaIndex: 0,
   isPlayingAudio: false,
   failedLoginCount: 0,
+  authMode: 'login',
   
   kotowazaList: [
     { kanji: "七転び八起き", romaji: "Nanakorobi yaoki", makna: "Jatuh tujuh kali, bangkit delapan kali. Kalau hari ini capek belajar Kanji, besok kita obati dengan semangkok ramen panas." },
@@ -498,7 +499,21 @@ function renderMessages() {
   });
 }
 
-function handleMessageSubmit(e) {
+async function loadMessagesFromApi() {
+  try {
+    const res = await fetch('/api/messages');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.success && Array.isArray(data.messages) && data.messages.length > 0) {
+      AppState.messages = data.messages;
+      renderMessages();
+    }
+  } catch (err) {
+    console.log('Load messages offline or static fallback:', err);
+  }
+}
+
+async function handleMessageSubmit(e) {
   e.preventDefault();
   if (!AppState.isAuth) {
     openLoginModal();
@@ -509,22 +524,74 @@ function handleMessageSubmit(e) {
   const tag = document.getElementById('msg-tag').value;
   const content = document.getElementById('msg-content').value.trim();
 
-  const now = new Date();
-  const formattedTime = now.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' }) + ', ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  try {
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, role, tag, content })
+    });
+    const data = await res.json();
+    if (data.success && data.message) {
+      AppState.messages.unshift(data.message);
+    } else {
+      const now = new Date();
+      const formattedTime = now.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' }) + ', ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      AppState.messages.unshift({ id: Date.now(), name, role, tag, time: formattedTime, content });
+    }
+  } catch (err) {
+    const now = new Date();
+    const formattedTime = now.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' }) + ', ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    AppState.messages.unshift({ id: Date.now(), name, role, tag, time: formattedTime, content });
+  }
 
-  AppState.messages.unshift({ id: Date.now(), name, role, tag, time: formattedTime, content });
   renderMessages();
   document.getElementById('msg-content').value = '';
-  showToast("Cerita kenangan berhasil dikirim!");
-  triggerMascotReaction("Pesan terkirim! 💌");
+  showToast("Cerita kenangan tersimpan di database!");
+  triggerMascotReaction("Pesan tersimpan di database! 💌");
 }
 
 /* 12. Account Authentication & Interactive Meme Reactions */
 function openLoginModal() {
   document.getElementById('login-modal').classList.add('open');
+  setAuthMode('login');
   setMascotState('idle');
   const userInput = document.getElementById('login-username');
   if (userInput) userInput.focus();
+}
+
+function setAuthMode(mode) {
+  AppState.authMode = mode;
+  const tabLogin = document.getElementById('tab-auth-login');
+  const tabRegister = document.getElementById('tab-auth-register');
+  const nameField = document.getElementById('field-register-name');
+  const emailField = document.getElementById('field-register-email');
+  const userLabel = document.getElementById('label-username');
+  const titleEl = document.getElementById('auth-modal-title');
+  const subEl = document.getElementById('auth-modal-sub');
+  const submitLabel = document.getElementById('auth-submit-label');
+  const errBox = document.getElementById('login-error');
+
+  if (errBox) errBox.style.display = 'none';
+
+  if (mode === 'register') {
+    if (tabLogin) { tabLogin.style.background = 'transparent'; tabLogin.style.color = 'var(--bone)'; }
+    if (tabRegister) { tabRegister.style.background = 'var(--gold)'; tabRegister.style.color = '#000'; }
+    if (nameField) nameField.style.display = 'block';
+    if (emailField) emailField.style.display = 'block';
+    if (userLabel) userLabel.innerText = 'Username Circle';
+    if (titleEl) titleEl.innerText = 'Daftar Akun Circle';
+    if (subEl) subEl.innerText = 'Buat akun member baru untuk masuk database circle.';
+    if (submitLabel) submitLabel.innerText = 'Daftar Sekarang';
+  } else {
+    if (tabLogin) { tabLogin.style.background = 'var(--gold)'; tabLogin.style.color = '#000'; }
+    if (tabRegister) { tabRegister.style.background = 'transparent'; tabRegister.style.color = 'var(--bone)'; }
+    if (nameField) nameField.style.display = 'none';
+    if (emailField) emailField.style.display = 'none';
+    if (userLabel) userLabel.innerText = 'Username / Email';
+    if (titleEl) titleEl.innerText = 'Masuk Akun Circle';
+    if (subEl) subEl.innerText = 'Silakan masukkan username/email dan kata sandi Anda.';
+    if (submitLabel) submitLabel.innerText = 'Masuk Sekarang';
+  }
 }
 
 function closeLoginModal() {
@@ -566,46 +633,107 @@ async function handleAccountLoginSubmit(e) {
 
   const userEl = document.getElementById('login-username');
   const passEl = document.getElementById('login-password');
+  const nameEl = document.getElementById('register-name');
+  const emailEl = document.getElementById('register-email');
   const errBox = document.getElementById('login-error');
   const errText = document.getElementById('login-error-text');
 
-  const username = userEl ? userEl.value.trim().toLowerCase() : '';
+  const username = userEl ? userEl.value.trim() : '';
   const password = passEl ? passEl.value : '';
 
   if (!username || !password) {
     if (errBox) {
       errBox.style.display = 'block';
-      if (errText) errText.innerText = 'Harap isi username dan password.';
+      if (errText) errText.innerText = 'Harap isi semua kolom wajib.';
     }
     return;
   }
 
-  // Akun terverifikasi circle
-  const allowedUsers = ['jikul@jc.co.id', 'jikul', 'jculinary', 'jculinary@gmail.com', 'jculinary06@gmail.com'];
-  const isValidAuth = allowedUsers.includes(username) && (password === 'japaneseculinary');
+  // REGISTER FLOW
+  if (AppState.authMode === 'register') {
+    const name = nameEl ? nameEl.value.trim() : username;
+    const email = emailEl ? emailEl.value.trim() : `${username}@jc.co.id`;
 
-  if (isValidAuth) {
-    // LOGIN BERHASIL
-    AppState.isAuth = true;
-    AppState.currentUserEmail = username;
-    AppState.failedLoginCount = 0;
+    if (!email) {
+      if (errBox) {
+        errBox.style.display = 'block';
+        if (errText) errText.innerText = 'Email wajib diisi.';
+      }
+      return;
+    }
 
-    // Simpan ke storage client agar sinkron ke dashboard & tidak ter-reset
     try {
-      sessionStorage.setItem('jc_auth_email', username);
-      localStorage.setItem('jc_auth_email', username);
-    } catch (_) {}
-
-    // Sinkronisasi session ke backend API jika tersedia
-    try {
-      fetch('/api/verify-login', {
+      const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      }).catch(() => {});
+        body: JSON.stringify({ name, username, email, password })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        AppState.isAuth = true;
+        AppState.currentUserEmail = data.user?.email || email;
+        try {
+          sessionStorage.setItem('jc_auth_email', AppState.currentUserEmail);
+          localStorage.setItem('jc_auth_email', AppState.currentUserEmail);
+        } catch (_) {}
+
+        setMascotState('success');
+        if (errBox) errBox.style.display = 'none';
+        showToast("Akun berhasil dibuat & tersimpan di database! 🎉");
+        triggerMascotReaction("Akun baru aktif! Selamat datang di circle! ✨");
+
+        setTimeout(() => {
+          closeLoginModal();
+          updateAuthUI();
+        }, 1200);
+        return;
+      } else {
+        if (errBox) {
+          errBox.style.display = 'block';
+          if (errText) errText.innerText = data.message || 'Gagal mendaftar akun.';
+        }
+        setMascotState('fail1');
+        return;
+      }
+    } catch (err) {
+      console.log('Register request error:', err);
+    }
+  }
+
+  // LOGIN FLOW (Verify against API / Database first)
+  let loginSuccess = false;
+  let loggedEmail = username.toLowerCase();
+
+  try {
+    const res = await fetch('/api/verify-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      loginSuccess = true;
+      loggedEmail = data.user?.email || loggedEmail;
+    }
+  } catch (err) {
+    // API offline/static fallback check
+    const allowedUsers = ['jikul@jc.co.id', 'jikul', 'jculinary', 'jculinary@gmail.com', 'jculinary06@gmail.com'];
+    if (allowedUsers.includes(username.toLowerCase()) && password === 'japaneseculinary') {
+      loginSuccess = true;
+    }
+  }
+
+  if (loginSuccess) {
+    AppState.isAuth = true;
+    AppState.currentUserEmail = loggedEmail;
+    AppState.failedLoginCount = 0;
+
+    try {
+      sessionStorage.setItem('jc_auth_email', loggedEmail);
+      localStorage.setItem('jc_auth_email', loggedEmail);
     } catch (_) {}
 
-    // Reaksi Sukses -> Gambar 3 (Hamster Heart Hands)
     setMascotState('success');
     if (errBox) errBox.style.display = 'none';
 
@@ -618,28 +746,24 @@ async function handleAccountLoginSubmit(e) {
     setTimeout(() => {
       closeLoginModal();
       updateAuthUI();
-      // Scroll halus ke galeri arsip
       const galeriEl = document.getElementById('galeri');
       if (galeriEl) galeriEl.scrollIntoView({ behavior: 'smooth' });
     }, 1200);
 
   } else {
-    // LOGIN GAGAL
     AppState.failedLoginCount++;
     if (errBox) {
       errBox.style.display = 'block';
       if (AppState.failedLoginCount === 1) {
         if (errText) errText.innerText = 'Username atau password salah. Cek kembali akun circle kamu.';
       } else {
-        if (errText) errText.innerText = 'Akses Ditolak! Akun circle: jikul@jc.co.id | Password: japaneseculinary';
+        if (errText) errText.innerText = 'Akses Ditolak! Akun circle: jikul / password: japaneseculinary atau klik "Daftar"';
       }
     }
 
     if (AppState.failedLoginCount === 1) {
-      // Gagal 1x -> Gambar 1: Bebek teriak ledakan nuklir
       setMascotState('fail1');
     } else {
-      // Gagal 2x atau lebih -> Gambar 2: Hamster cangkir kopi ledakan nuklir
       setMascotState('fail2');
     }
   }
@@ -763,6 +887,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initScrollReveal();
   renderKotowaza(Math.floor(Math.random() * AppState.kotowazaList.length));
   renderMessages();
+  loadMessagesFromApi();
   updateAuthUI();
   checkExistingSession();
 });

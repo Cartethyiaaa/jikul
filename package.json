@@ -8,6 +8,8 @@
     "start": "vercel dev"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/postgres": "^0.10.0",
     "cookie": "^0.6.0",
     "google-auth-library": "^9.14.1",
     "jose": "^5.9.6"

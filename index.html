@@ -610,9 +610,13 @@
     </div>
 
     <button onclick="closeLoginModal()" style="position:absolute; top:18px; right:18px; font-size:18px; color:var(--muted); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-    <div style="text-align:center; margin-bottom:18px;">
-      <h3 style="font-family:'Instrument Serif',serif; font-size:26px; margin:0 0 6px;">Masuk Akun Circle</h3>
-      <p style="font-size:12.5px; color:var(--bone-dim); margin:0;">Silakan masukkan username/email dan kata sandi Anda.</p>
+    <div style="text-align:center; margin-bottom:14px;">
+      <h3 id="auth-modal-title" style="font-family:'Instrument Serif',serif; font-size:26px; margin:0 0 6px;">Akun Circle</h3>
+      <div style="display:inline-flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:10px; border:1px solid var(--line-gold); margin-top:6px;">
+        <button type="button" id="tab-auth-login" onclick="setAuthMode('login')" style="padding:5px 14px; font-size:12px; border-radius:7px; background:var(--gold); color:#000; font-weight:600; cursor:pointer; border:none;">Masuk</button>
+        <button type="button" id="tab-auth-register" onclick="setAuthMode('register')" style="padding:5px 14px; font-size:12px; border-radius:7px; background:transparent; color:var(--bone); font-weight:500; cursor:pointer; border:none;">Daftar</button>
+      </div>
+      <p id="auth-modal-sub" style="font-size:12.5px; color:var(--bone-dim); margin:10px 0 0;">Silakan masukkan username/email dan kata sandi Anda.</p>
     </div>
 
     <form id="circle-login-form" onsubmit="handleAccountLoginSubmit(event)" style="display:flex; flex-direction:column; gap:14px;">
@@ -621,8 +625,24 @@
         <i class="fa-solid fa-circle-exclamation"></i> <span id="login-error-text">Username atau password salah.</span>
       </div>
 
+      <div id="field-register-name" style="display:none;">
+        <label for="register-name" style="display:block; font-size:11px; letter-spacing:0.1em; color:var(--gold); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Nama Lengkap / Panggilan</label>
+        <div style="position:relative;">
+          <i class="fa-solid fa-id-card" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px;"></i>
+          <input type="text" id="register-name" placeholder="Nama Anda" class="kage-input" style="padding-left:38px;">
+        </div>
+      </div>
+
+      <div id="field-register-email" style="display:none;">
+        <label for="register-email" style="display:block; font-size:11px; letter-spacing:0.1em; color:var(--gold); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Email</label>
+        <div style="position:relative;">
+          <i class="fa-solid fa-envelope" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px;"></i>
+          <input type="email" id="register-email" placeholder="nama@email.com" class="kage-input" style="padding-left:38px;">
+        </div>
+      </div>
+
       <div>
-        <label for="login-username" style="display:block; font-size:11px; letter-spacing:0.1em; color:var(--gold); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Username / Email</label>
+        <label for="login-username" id="label-username" style="display:block; font-size:11px; letter-spacing:0.1em; color:var(--gold); margin-bottom:6px; font-weight:600; text-transform:uppercase;">Username / Email</label>
         <div style="position:relative;">
           <i class="fa-solid fa-user" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px;"></i>
           <input type="text" id="login-username" required placeholder="Masukkan username atau email" class="kage-input" style="padding-left:38px;" autocomplete="username">
@@ -641,7 +661,7 @@
       </div>
 
       <button type="submit" id="login-submit-btn" class="kage-btn-primary" style="width:100%; justify-content:center; padding:12px; font-size:13.5px; margin-top:6px;">
-        <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk Sekarang
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> <span id="auth-submit-label">Masuk Sekarang</span>
       </button>
     </form>
   </div>
